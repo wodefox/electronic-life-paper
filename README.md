@@ -41,9 +41,9 @@ To avoid conceptual ambiguity, this paper proposes three necessary properties fo
 
 ### 3.1 Self-Maintenance
 
-A system exhibits self-maintenance if it actively preserves its internal state within a viability region despite external or internal perturbations. Let the system state be represented by a continuous vector $S_t \in \mathbb{R}^n$, and let $\Omega \subset \mathbb{R}^n$ denote the region in which the system remains operational.
+A system exhibits self-maintenance if it actively preserves its internal state within a viability region despite external or internal perturbations. Let the system state be represented by a continuous vector $S_t \\in \\mathbb{R}^n$, and let $\\Omega \\subset \\mathbb{R}^n$ denote the region in which the system remains operational.
 
-Sustained operation requires that $S_t \in \Omega$ over extended time horizons. Exit from this region corresponds to irreversible system degradation.
+Sustained operation requires that $S_t \\in \\Omega$ over extended time horizons. Exit from this region corresponds to irreversible system degradation.
 
 ---
 
@@ -81,11 +81,11 @@ To support empirical research, we introduce the *Minimal Electronic Life System 
 
 The system dynamics are defined as:
 
-$$\dot{S}_t = f(S_t, E_t, \Theta_t)$$
+$$\\dot{S}_t = f(S_t, E_t, \\Theta_t)$$
 
-$$\dot{\Theta}_t = g(S_t, \Theta_t)$$
+$$\\dot{\\Theta}_t = g(S_t, \\Theta_t)$$
 
-where $S_t$ denotes internal state, $E_t$ the environment, and $\Theta_t$ the system’s structural parameters. The function $g$ must not depend on externally supplied error signals or rewards.
+where $S_t$ denotes internal state, $E_t$ the environment, and $\\Theta_t$ the system’s structural parameters. The function $g$ must not depend on externally supplied error signals or rewards.
 
 ---
 
