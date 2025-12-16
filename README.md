@@ -116,6 +116,6 @@ This paper reframes electronic life as a falsifiable object of scientific study.
 ## Author Information
 
 **钟沐 / Mu Zhong**
-Chongqing Vocational College of Information Technology
+Chongqing Vocational College of Information Technology （CCIT）
 Research Interests: Artificial Intelligence, Artificial Life, Future Computational Architectures
 Email: **[fteAPT@163.com](mailto:fteAPT@163.com)**
