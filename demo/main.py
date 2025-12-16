@@ -9,6 +9,40 @@ from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 
+class MinimalSelfModel:
+    """
+    Minimal Self-Model for V0.4
+    Predicts future self-state given current self and action
+    """
+
+    def __init__(self):
+        # Simple linear parameters (no NN yet)
+        self.weights = {
+            "explore": {"energy": -0.05, "integrity": -0.02, "health": -0.01},
+            "rest":    {"energy": +0.03, "integrity": +0.04, "health": +0.02}
+        }
+        self.confidence = 0.5
+        self.error_ema = 0.0
+
+    def predict(self, state, action):
+        pred = {}
+        for k in ["energy", "integrity", "health"]:
+            pred[k] = max(0.0, min(1.0, state[k] + self.weights[action][k]))
+        return pred
+
+    def update(self, predicted, actual):
+        # prediction error = identity-relevant error
+        error = sum((predicted[k] - actual[k]) ** 2 for k in predicted) / len(predicted)
+
+        # EMA update
+        alpha = 0.05
+        self.error_ema = alpha * error + (1 - alpha) * self.error_ema
+
+        # confidence = inverse of uncertainty
+        self.confidence = max(0.0, min(1.0, math.exp(-5 * self.error_ema)))
+
+        return error
+
 class AutonomousLifeSystem:
     def __init__(self, energy=1.0, integrity=1.0, seed=42):
         # Set random seed for reproducibility
@@ -108,6 +142,9 @@ class AutonomousLifeSystem:
             "ema_error": 0.0,     # exponential moving average of prediction error
             "ema_error_var": 0.0  # exponential moving average of prediction error variance
         }
+        
+        # --- V0.4 Self-Model ---
+        self.self_model = MinimalSelfModel()
 
     def compute_physiological_drive(self):
         """Calculate drive from basic survival needs"""
@@ -403,6 +440,20 @@ class AutonomousLifeSystem:
         
         return action_value, predicted_state, uncertainty
 
+    def identity_distance(self, state_a, state_b):
+        """
+        Measures how much 'I would no longer be myself'
+        """
+        weights = {
+            "energy": 0.4,
+            "integrity": 0.4,
+            "health": 0.2
+        }
+        dist = 0.0
+        for k, w in weights.items():
+            dist += w * abs(state_a[k] - state_b[k])
+        return dist
+        
     def decide_action(self, t):
         """Decide next action based on self-model, memory, and drives"""
         # Generate possible actions
@@ -414,14 +465,24 @@ class AutonomousLifeSystem:
             value, predicted_state, uncertainty = self.evaluate_action(self.self_state, action, t)
             action_evaluations.append((action, value, predicted_state, uncertainty))
         
-        # Calculate UCB-like scores (value + uncertainty bonus)
+        # Calculate UCB-like scores with identity penalty
+        identity_penalty_weight = 0.3 * (1.0 - self.self_model.confidence)
+        
         ucb_scores = []
         for action, value, predicted_state, uncertainty in action_evaluations:
-            # UCB exploration parameter - balances exploitation vs exploration
-            ucb_param = 0.2
+            # Get self-model prediction
+            predicted_self = self.self_model.predict(self.self_state, action)
             
-            # Calculate UCB score: value + exploration bonus based on uncertainty
-            ucb_score = value + (uncertainty * ucb_param)
+            # Calculate identity loss
+            identity_loss = self.identity_distance(predicted_self, self.self_state)
+            
+            # Calculate UCB score with identity penalty
+            ucb_score = (
+                value
+                + uncertainty * 0.2
+                - identity_penalty_weight * identity_loss
+            )
+            
             ucb_scores.append((action, ucb_score, value, uncertainty))
         
         # Choose action with highest UCB score
@@ -499,6 +560,25 @@ class AutonomousLifeSystem:
         error_diff = total_error - old_ema
         self.prediction_error["ema_error_var"] = alpha * (error_diff ** 2) + (1 - alpha) * self.prediction_error["ema_error_var"]
         
+        # --- V0.4 Self-Model update ---
+        predicted_self = self.self_model.predict(
+            {
+                "energy": predicted_state["energy"],
+                "integrity": predicted_state["integrity"],
+                "health": predicted_state["health"]
+            },
+            action
+        )
+        
+        self.self_model.update(
+            predicted_self,
+            {
+                "energy": s["energy"],
+                "integrity": s["integrity"],
+                "health": s["health"]
+            }
+        )
+        
         # Create experience record for memory update
         experience = {
             "action": action,
@@ -523,6 +603,10 @@ class AutonomousLifeSystem:
         
         # Small learning rate for continuous updates
         learning_rate = 0.01
+        
+        # If self-model confidence is low, allow higher plasticity
+        if self.self_model.confidence < 0.4:
+            learning_rate *= 1.5
         
         # Example: Adjust exploration parameters based on success rate
         if "explore" in self.memory["procedural"]:
